@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from open_rag_eval.data_classes.eval_scores import ConsistencyResult
 from open_rag_eval.data_classes.rag_results import MultiRAGResult
-from open_rag_eval.metrics import HallucinationMetric
+from open_rag_eval.metrics import HallucinationMetric, GPTHallucinationMetric
 from open_rag_eval.metrics.bert_score_similarity_metric import \
     BERTScoreSimilarityMetric
 from open_rag_eval.metrics.rouge_score_similarity_metric import \
@@ -94,7 +94,7 @@ class ConsistencyEvaluator(Evaluator):
                 print(f"Adding missing default metric: {metric_name}")
                 self.metric_calculators.append(constructor)
 
-        self.hallucination_metric = HallucinationMetric()
+        self.hallucination_metric = GPTHallucinationMetric()
 
     def evaluate(
         self,

@@ -17,7 +17,7 @@ from open_rag_eval.data_classes.eval_scores import (AugmentedGenerationScores,
                                                     ScoredRAGResult)
 from open_rag_eval.data_classes.rag_results import MultiRAGResult
 from open_rag_eval.metrics import (AutoNuggetMetric, CitationMetric,
-                                   HallucinationMetric, NoAnswerMetric,
+                                   HallucinationMetric, GPTHallucinationMetric, NoAnswerMetric,
                                    UMBRELAMetric)
 from open_rag_eval.models.llm_judges import LLMJudgeModel
 
@@ -32,7 +32,7 @@ class TRECEvaluator(Evaluator):
         self.retrieval_metric = UMBRELAMetric(model)
         self.generation_metric = AutoNuggetMetric(model)
         self.citation_metric = CitationMetric(model)
-        self.hallucination_metric = HallucinationMetric()
+        self.hallucination_metric = GPTHallucinationMetric()
         self.no_answer_metric = NoAnswerMetric(model)
 
         if not options:

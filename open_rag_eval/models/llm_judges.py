@@ -28,9 +28,9 @@ class OpenAIModel(LLMJudgeModel):
 
     def __init__(self, model_options: dict):
         self.model_name = model_options["name"]
-        openai.api_key = model_options["api_key"]
+        self.api_key = model_options["api_key"]
         self.base_url = model_options.get("base_url", None)
-        self.client = openai.OpenAI(base_url=self.base_url)
+        self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
 
     @retry(
         retry=retry_if_exception_type(
