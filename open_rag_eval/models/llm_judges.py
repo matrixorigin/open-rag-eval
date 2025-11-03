@@ -31,6 +31,8 @@ class OpenAIModel(LLMJudgeModel):
         self.api_key = model_options["api_key"]
         self.base_url = model_options.get("base_url", None)
         self.client = openai.OpenAI(base_url=self.base_url, api_key=self.api_key)
+        # 异步客户端，用于并发调用
+        self.async_client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key)
 
     @retry(
         retry=retry_if_exception_type(
@@ -76,6 +78,64 @@ class OpenAIModel(LLMJudgeModel):
 
         try:
             response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                **model_kwargs,
+            )
+            return response.choices[0].message.content
+        except openai.RateLimitError:
+            raise
+        except openai.APIConnectionError:
+            raise
+        except openai.APIError:
+            raise
+        except Exception as e:
+            raise Exception(f"Unexpected error: {str(e)}") from e
+
+    @retry(
+        retry=retry_if_exception_type(
+            (
+                openai.RateLimitError,
+                openai.APIConnectionError,
+                openai.APIError,
+                ValueError,
+            )
+        ),
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+    )
+    async def async_call(self, prompt: str, model_kwargs=None, system_message: str = None) -> str:
+        """
+        异步调用OpenAI API兼容模型（用于并发评估）
+
+        Args:
+            prompt (str): 输入prompt
+            model_kwargs (dict, optional): API调用的额外参数
+            system_message (str, optional): 系统消息，定义模型行为和角色
+
+        Returns:
+            str: 模型响应文本
+
+        Raises:
+            ValueError: prompt为空或model_kwargs无效
+            openai.APIError: API相关错误
+            openai.RateLimitError: 超出速率限制
+            openai.APIConnectionError: 网络错误
+            Exception: 其他未预期的错误
+        """
+        if not prompt.strip():
+            raise ValueError("Prompt cannot be empty")
+
+        model_kwargs = model_kwargs or {}
+
+        # 构建messages列表
+        messages = []
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            response = await self.async_client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
                 **model_kwargs,
