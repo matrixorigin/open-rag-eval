@@ -38,19 +38,20 @@ class OpenAIModel(LLMJudgeModel):
                 openai.RateLimitError,
                 openai.APIConnectionError,
                 openai.APIError,
-                ValueError,  # catch our “none‐response” too
+                ValueError,  # catch our "none‐response" too
             )
         ),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
     )
-    def call(self, prompt: str, model_kwargs=None) -> str:
+    def call(self, prompt: str, model_kwargs=None, system_message: str = None) -> str:
         """
         Call the OpenAI API compatible model with the given prompt.
 
         Args:
             prompt (str): The input prompt for the model
             model_kwargs (dict, optional): Additional kwargs for the API call
+            system_message (str, optional): System message to define model behavior and role
 
         Returns:
             str: The model's response text
@@ -67,10 +68,16 @@ class OpenAIModel(LLMJudgeModel):
 
         model_kwargs = model_kwargs or {}
 
+        # 构建messages列表
+        messages = []
+        if system_message:
+            messages.append({"role": "system", "content": system_message})
+        messages.append({"role": "user", "content": prompt})
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 **model_kwargs,
             )
             return response.choices[0].message.content
